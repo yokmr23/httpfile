@@ -1,0 +1,86 @@
+<!doctype html>
+    <html lang="ja">
+    <head>
+    <meta charset="utf-8">
+    <title>cgi code</title>
+    <link href="css/pretty-print.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+    </head>
+    
+    <body style="margin-left:5%; margin-right:5%;">
+    <h1>cgi python code</h1>
+    <hr />
+    
+    <p></p>
+    <pre class="prettyprint linenums">
+#!/usr/local/bin/python
+# -*- coding: utf-8 -*-
+import cgitb
+import sys
+import io
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+from scipy.io.wavfile import read
+from scipy import signal
+
+def main():
+	image = fft()
+	sys.stdout.buffer.write(b'Content-Type:image/png\n\n')
+	sys.stdout.buffer.write(image.read())
+
+def fft():
+	fname = "data/Ring09.wav"
+	# fs:sample rate of wav file, data:numpy array ,
+	fs, data = read(fname)
+	# 時間長を求める
+	length = data.shape[0] / fs
+	# 時間軸に対する信号
+	x = data[:, 0]
+	# fig: Figure, ax1, ax2: axes.Axes object or array of Axes objects.
+	fig, (ax1, ax2) = plt.subplots(nrows=2)
+	# 時間軸
+	t = np.arange(0.0, length, 1 / fs)
+	ax1.plot(t, x)
+	ax1.set(ylabel="音圧")
+	plt.subplot(ax1)
+	plt.title("音源の強さとその音源の短時間FFT")
+	#############################
+	# Pxx: spectrum 2D-array, 
+	# freqs: 1D-array, 
+	# bin: 1D-array, im: 
+	# instance of class AxesImage
+	##############################
+	#plt.subplots_adjust(hspace=0.1)
+	Pxx, freqs, bins, im = ax2.specgram(
+		x, Fs=fs, cmap="magma", scale="dB", vmin=1.0, vmax=60.0)
+
+	fig.colorbar(im, ax=ax2)
+	ax2.set(xlabel="時間(s)", ylabel="周波数(Hz)")
+	ax2.set_yscale("log")
+	ax2.set_ylim(ymax=10000, ymin=100)
+	ax2.set_xlim(xmin=0.0)
+	xlim2 = ax2.get_xlim()
+	ax1.set_xlim(xmin=0.0, xmax=xlim2[1])
+	# now determine nice limits by hand:
+	# 音圧の絶対値の最大値の1割増しをlimにする
+	lim = max(abs(x)) * 1.1
+	ax1.set_ylim(-lim, lim)
+	for i in range(0, 4):
+    		ax1.vlines(2 + i * 2, -lim, lim, colors="black", linewidth=0.5, linestyle="dashed")
+   
+	# 上下のグラフの大きさを揃える
+	ax1_pos = ax1.get_position()
+	ax2_pos = ax2.get_position()
+	ax1.set_position((ax1_pos.x0, ax1_pos.y0, ax2_pos.width, ax1_pos.height))
+	image = io.BytesIO()
+	plt.savefig(image,format='png')
+	image.seek(0)
+	return image
+
+if __name__ == "__main__":
+	main()
+        </pre>
+	<A HREF="cgi-bin/fft-sound-01.py">実行</A>
+    </body>
+    </html>
